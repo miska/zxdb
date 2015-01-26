@@ -1,0 +1,929 @@
+.#   zxdb_cpp.gsl
+.#
+.#   Generates a tntdb class abstraction
+.#
+.
+.for property
+.    if type = "string"
+.        property.size ?= -1
+.        property.ctype = "std::string"
+.        property.tnttype = "String"
+.        if property.size > 0
+.            property.sqltype = "VARCHAR($(size))"
+.        else
+.            property.sqltype = "TEXT"
+.        endif
+.    elsif type = "number"
+.        property.size ?= 4
+.        property.signed ?= "yes"
+.        if property.size = 4
+.            if property.signed = "no"
+.                property.tnttype = "Unsigned32"
+.                property.ctype = "uint32_t"
+.                property.sqltype = "INTEGER UNSIGNED"
+.            else
+.                property.tnttype = "Int32"
+.                property.ctype = "int32_t"
+.                property.sqltype = "INTEGER"
+.            endif
+.        elsif property.size = 2
+.            if property.signed = "yes"
+.                property.ctype = "int16_t"
+.                property.tnttype = "Int16"
+.                property.sqltype = "SMALLINT"
+.            else
+.                property.ctype = "uint64_t"
+.                property.tnttype = "Unsigned16"
+.                property.sqltype = "SMALLINT UNSIGNED"
+.            endif
+.        elsif property.size = 8
+.            if property.signed = "yes"
+.                property.ctype = "int64_t"
+.                property.tnttype = "Int64"
+.                property.sqltype = "BIGINT"
+.            else
+.                property.ctype = "uint64_t"
+.                property.tnttype = "Unsigned64"
+.                property.sqltype = "BIGINT UNSIGNED"
+.            endif
+.        else
+.            echo "E: bad size $(size) for $(name)"
+.        endif
+.    endif
+.endfor
+.
+.echo "Generating $(class.name).hpp..."
+.output "$(class.name).hpp"
+/**
+ * \file $(class.name).hpp
+ *
+ * \brief Header for $(class.name)
+ *
+ * $(class.title:)
+ *
+ */
+
+/***** WARNING **************************************************************
+ *                                                                          *
+ * THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose *
+ * your changes at the next build cycle. This is great for temporary printf *
+ * statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places *
+ * for commits are:                                                         *
+ *                                                                          *
+ * - The XML model used for this code generation: $(filename), or           *
+ * - The generation script that built this file: $(script)                  *
+ *                                                                          *
+ ***************************************************************************/
+
+/*
+  ==========================================================================
+. for class.license
+  $(string.trim (license.):block                                           )
+. endfor
+  ==========================================================================
+*/
+
+#ifndef __$(CLASS.NAME)_H_INCLUDED__
+#define __$(CLASS.NAME)_H_INCLUDED__
+
+#include <vector>
+#include <string>
+#include <functional>
+#include <tntdb.h>
+#include <cxxtools/serializationinfo.h>
+
+.for include
+.if (type) = "system"
+#include <$(name:)>
+.else
+#include "$(name:)"
+.endif
+.endfor
+
+.for has_many
+class $(Name);
+.endfor
+.for belongs_to
+class $(Name);
+.endfor
+
+class $(class.Name) {
+private:
+    //! Database id
+    uint64_t db_id;
+    //! Indicates changes not yet saved in database
+    bool dirty;
+    //! Indicates whether existence of the table was already checked
+    static bool table_exists;
+.for property
+    //! $(property:)
+    $(ctype) $(name);
+.endfor
+.for belongs_to
+    //! $(belongs_to:)
+    uint64_t $(name)_id;
+.endfor
+    //! Private constructor purely for deserializer
+    $(class.Name)():
+              db_id(0)
+.for property
+.if type = "string"
+            , $(name)("")
+.else
+            , $(name)(0)
+.endif
+.endfor
+.for belongs_to
+            , $(name)_id(0)
+.endfor
+            {}
+    //! Private constructor directly from database
+    $(class.Name)(
+              const uint64_t& in_db_id
+.for property
+            , const $(ctype)& in_$(name)
+.endfor
+.for belongs_to
+            , uint64_t in_$(name)_id
+.endfor
+            ) :
+              db_id(in_db_id)
+            , dirty(false)
+.for property
+            , $(name)(in_$(name))
+.endfor
+.for belongs_to
+            , $(name)_id(in_$(name)_id)
+.endfor
+            {}
+    //! Returns element specified by it's database id
+    static $(class.Name) get_by_id(uint64_t id);
+
+public:
+    //! Destructor
+    virtual ~$(class.Name)() {
+        if(dirty)
+            save();
+    }
+    //! Makes sure that table exists (called from constructor)
+    static void init();
+    //! Tells class to reinitialize database (if you do something really nasty)
+    static void reinit() {
+        table_exists = false;
+        init();
+    }
+    //! Save object into database
+    virtual void save();
+    //! Returns unique database id
+    virtual uint64_t get_db_id() { return db_id; }
+.for property
+    //! Setter for $(name)
+    virtual $(ctype)& set_$(name)(const $(ctype));
+    //! Getter for $(name)
+    virtual $(ctype)  get_$(name)() const;
+.endfor
+.for has_many
+    //! Get all $(name)s belonging to this $(class.name)
+    virtual std::vector<$(Name)> get_$(name)s() const;
+    //! Add new $(name) to this $(class.name)
+    virtual void add_$(name)($(Name)& $(name));
+.endfor
+.for belongs_to
+    //! Set id of parent $(name)
+    virtual void set_parent_$(name)_id(uint64_t id);
+    //! Get id of parent $(name)
+    virtual uint64_t get_parent_$(name)_id() const;
+    //! Set parent $(name)
+    virtual void set_parent_$(name)(const $(Name) parent);
+    //! Get parent $(name)
+    virtual $(Name) get_parent_$(name)() const;
+.endfor
+    //! Default constructor
+    $(class.Name)(
+.for property
+.if !last()
+            const $(ctype)& in_$(name),
+.else
+            const $(ctype)& in_$(name)
+.endif
+.endfor
+        );
+    //! Copy constructor
+    $(class.Name)(const $(class.Name)& other) :
+              db_id(other.db_id)
+            , dirty(other.dirty)
+.for property
+            , $(name)(other.$(name))
+.endfor
+.for belongs_to
+            , $(name)_id(other.$(name)_id)
+.endfor
+            {}
+    //! Move constructor
+    $(class.Name)(const $(class.Name)&& other) :
+            db_id(other.db_id),
+            dirty(other.dirty),
+.for property
+.if !last()
+.if type = "string"
+            $(name)(move(other.$(name))),
+.else
+            $(name)(other.$(name)),
+.endif
+.else
+.if type = "string"
+            $(name)(move(other.$(name))) {}
+.else
+            $(name)(other.$(name)) {}
+.endif
+.endif
+.endfor
+    //! Equality comparison
+    virtual bool operator==(const $(class.Name)& other) const;
+    //! Assignment operator
+    virtual bool operator=(const $(class.Name)& other);
+    //! Inequality comparison
+    bool operator!=(const $(class.Name)& other) const {
+        return !operator==(other);
+    }
+    //! Runs specified function on every matching element
+    static void for_each(std::function<void($(class.Name))> what,
+        std::string where = "",
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+    //! Return matching instances
+    static std::vector<$(class.Name)> search(std::string where = "",
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {}) {
+        std::vector<$(class.Name)> ret;
+        $(class.Name)::for_each([&ret]($(class.Name) $(class.name)) {
+                ret.push_back($(class.name));
+            }, where, set);
+        return ret;
+    }
+    //! Exporting structure for future import
+    void serialize(cxxtools::SerializationInfo& si);
+    //! Importing previously exported structure
+    static $(class.Name) deserialize(const cxxtools::SerializationInfo& si);
+};
+
+#endif
+.echo "Generating $(class.name).cpp..."
+.output "$(class.name).cpp"
+/**
+ * \file $(class.name).cpp
+ *
+ * \brief Implementation of $(class.name)
+ *
+ * $(class.title:)
+ *
+ */
+
+/***** WARNING **************************************************************
+ *                                                                          *
+ * THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose *
+ * your changes at the next build cycle. This is great for temporary printf *
+ * statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places *
+ * for commits are:                                                         *
+ *                                                                          *
+ * - The XML model used for this code generation: $(filename), or           *
+ * - The generation script that built this file: $(script)                  *
+ *                                                                          *
+ ***************************************************************************/
+
+/*
+  ==========================================================================
+. for class.license
+  $(string.trim (license.):block                                           )
+. endfor
+  ==========================================================================
+*/
+
+#include "$(class.name).hpp"
+.for has_many
+#include "$(name).hpp"
+.endfor
+.for belongs_to
+#include "$(name).hpp"
+.endfor
+
+bool $(class.Name)::table_exists = false;
+
+extern std::string db_url;
+
+//! Save object into database
+void $(class.Name)::save() {
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    // Update stuff in databse
+    smt = conn.prepareCached("UPDATE $(class.name) SET "
+.for property
+.if !last()
+                             "$(name) = :$(name), "
+.else
+                             "$(name) = :$(name) WHERE id = :id");
+.endif
+.endfor
+    smt
+.for property
+        .set("$(name)", $(name))
+.endfor
+        .execute();
+}
+
+.for has_many
+//! Get all $(name)s belonging to this $(class.name)
+std::vector<$(Name)> $(class.Name)::get_$(name)s() const {
+    auto id = db_id;
+    $(Name)::init();
+    auto ret = $(Name)::search("$(class.name)_id = :$(class.name)_id",
+        [id](tntdb::Statement& st) { st.set("$(class.name)_id", id); } );
+    return ret;
+}
+
+//! Add new $(name) to this $(class.name)
+void $(class.Name)::add_$(name)($(Name)& $(name)) {
+    $(name).set_parent_$(class.name)_id(db_id);
+}
+
+.endfor
+.for belongs_to
+//! Set $(class.Name)::id of parent $(name)
+void $(class.Name)::set_parent_$(name)_id(uint64_t id) {
+    $(name)_id = id;
+    dirty = true;
+}
+
+//! Get id of parent $(name)
+uint64_t $(class.Name)::get_parent_$(name)_id() const {
+    return $(name)_id;
+}
+
+//! Set parent $(name)
+void $(class.Name)::set_parent_$(name)(const $(Name) parent) {
+}
+
+//! Get parent $(name)
+$(Name) $(class.Name)::get_parent_$(name)() const {
+}
+
+.endfor
+.for property
+//! Setter for $(name)
+$(ctype)& $(class.Name)::set_$(name)(const $(ctype) val) {
+    $(name) = val;
+    dirty = true;
+    return $(name);
+}
+
+//! Getter for $(name)
+$(ctype)  $(class.Name)::get_$(name)() const {
+    return $(name);
+}
+
+.endfor
+//! Equality comparison
+bool $(class.Name)::operator==(const $(class.Name)& other) const {
+    return
+.for property
+.if !last()
+        $(name) == (other.$(name)) &&
+.else
+        $(name) == (other.$(name));
+.endif
+.endfor
+}
+
+//! Checks whether table exists and is correct
+void $(class.Name)::init() {
+    if(table_exists)
+        return;
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    // Create database if does not exist
+    smt = conn.prepare("CREATE TABLE IF NOT EXISTS $(class.name) ( "
+                       "id INTEGER PRIMARY KEY AUTOINCREMENT "
+.for property
+                       ", $(name) $(SQLTYPE) "
+.endfor
+.for belongs_to
+                       ", $(name)_id INTEGER DEFAULT 0"
+.endfor
+                       " ) ");
+    smt.execute();
+
+    table_exists = true;
+}
+
+//! Assignment operator
+bool $(class.Name)::operator=(const $(class.Name)& other) {
+.for property
+    $(name) = other.$(name);
+.endfor
+    dirty = true;
+}
+
+//! Exporting structure for future import
+void $(class.Name)::serialize(cxxtools::SerializationInfo& si) {
+.for property
+    si.addMember("$(name)").setValue(get_$(name)());
+.endfor
+.for has_many
+    auto nsi = si.addMember("$(name)");
+    nsi.setTypeName("set");
+    nsi.setCategory(cxxtools::SerializationInfo::Array);
+    {
+        auto list = get_$(name)s();
+        for(auto i: list) {
+            i.serialize(nsi.addMember(""));
+        }
+    }
+.endfor
+}
+
+//! Importing previously exported structure
+$(class.Name) $(class.Name)::deserialize(const cxxtools::SerializationInfo& si) {
+.for property
+    $(ctype) in_$(name);
+    si.getMember("$(name)") >>= in_$(name);
+.endfor
+    $(class.Name) f(
+.for property
+.if last()
+        in_$(name)
+.else
+        in_$(name),
+.endif
+.endfor
+    );
+.for has_many
+    {
+        auto msi = si.getMember("$(name)");
+        for(auto it : msi) {
+            $(Name) tmp = $(Name)::deserialize(it);
+            tmp.set_parent_$(class.name)(f);
+        }
+    }
+.endfor
+    return f;
+}
+
+//! Default constructor
+$(class.Name)::$(class.Name)(
+.for property
+.if !last()
+            const $(ctype)& in_$(name),
+.else
+            const $(ctype)& in_$(name)) {
+.endif
+.endfor
+    init();
+    db_id = 0;
+    dirty = false;
+.for property
+    $(name) = in_$(name);
+.endfor
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+    tntdb::Row row;
+
+    // Add into database if doesn't exists
+    smt = conn.prepareCached("INSERT INTO $(class.name) ( "
+.for property
+.if last() & count(class.belongs_to) = 0
+                             "$(name) ) "
+.else
+                             "$(name), "
+.endif
+.endfor
+.for belongs_to
+.if last()
+                             "$(name)_id ) "
+.else
+                             "$(name)_id, "
+.endif
+.endfor
+                             "SELECT "
+.for property
+.if last() & count(class.belongs_to) = 0
+                             ":$(name) "
+.else
+                             ":$(name), "
+.endif
+.endfor
+.for belongs_to
+.if last()
+                             ":$(name)_id "
+.else
+                             ":$(name)_id, "
+.endif
+.endfor
+                             "WHERE 1 NOT IN "
+                             "(SELECT 1 FROM $(class.name) WHERE "
+.for property
+.if last()
+                             "$(name) = :$(name) LIMIT 1)");
+.else
+                             "$(name) = :$(name) AND "
+.endif
+.endfor
+    smt
+.for property
+        .set("$(name)", $(name))
+.endfor
+.for belongs_to
+        .set("$(name)_id", $(name)_id)
+.endfor
+        .execute();
+
+    // Get ID from the database
+    smt = conn.prepareCached("SELECT "
+                             "  id "
+.for belongs_to
+                             ", $(name)_id "
+.endfor
+
+                             " FROM $(class.name) WHERE "
+.for property
+.if !last()
+                             "$(name) = :$(name) AND "
+.else
+                             "$(name) = :$(name) LIMIT 1");
+.endif
+.endfor
+    row = smt
+.for property
+        .set("$(name)", $(name))
+.endfor
+        .selectRow();
+    row[0].get(db_id);
+.for belongs_to
+    row[$(index())].get($(name)_id);
+.endfor
+}
+
+//! Runs specified function on every matching element
+void $(class.Name)::for_each(std::function<void($(class.Name))> what,
+        std::string where,
+        std::function<void(tntdb::Statement&)> set) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    init();
+
+    // Query data
+    std::string query = "SELECT id "
+.for property
+                             ", $(name) "
+.endfor
+.for belongs_to
+                             ", $(name)_id "
+.endfor
+                             " FROM $(class.name) ";
+    if(!where.empty()) {
+        query += " WHERE ";
+        query += where;
+    }
+    smt = conn.prepareCached(query);
+    set(smt);
+
+    // Construct response
+    for(auto row: smt) {
+        $(class.Name) it(
+              row.getUnsigned64("id")
+.for property
+            , row.get$(tnttype:)("$(name)")
+.endfor
+.for belongs_to
+            , row.getUnsigned64("$(name)_id")
+.endfor
+        );
+        what(it);
+    }
+}
+
+//! Returns element specified by it's database id
+$(class.Name) $(class.Name)::get_by_id(uint64_t id) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    init();
+
+    // Query data
+    std::string query = "SELECT id "
+.for property
+                             ", $(name) "
+.endfor
+.for belongs_to
+                             ", $(name)_id "
+.endfor
+                             " FROM $(class.name) "
+                             " WHERE id = :id ";
+    smt = conn.prepareCached(query);
+    smt.set("id", id);
+
+    // Construct response
+    auto row = smt.selectRow();
+    $(class.Name) ret(
+              row.getUnsigned64("id")
+.for property
+            , row.get$(tnttype:)("$(name)")
+.endfor
+.for belongs_to
+            , row.getUnsigned64("$(name)_id")
+.endfor
+        );
+    return ret;
+}
+
+
+.echo "Generating $(class.name)_test.cpp..."
+.output "$(class.name)_test.cpp"
+/**
+ * \file $(class.name)_test.cpp
+ *
+ * \brief Tests for $(class.name)
+ *
+ * $(class.title:)
+ *
+ */
+
+/***** WARNING **************************************************************
+ *                                                                          *
+ * THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose *
+ * your changes at the next build cycle. This is great for temporary printf *
+ * statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places *
+ * for commits are:                                                         *
+ *                                                                          *
+ * - The XML model used for this code generation: $(filename), or           *
+ * - The generation script that built this file: $(script)                  *
+ *                                                                          *
+ ***************************************************************************/
+
+/*
+  ==========================================================================
+. for class.license
+  $(string.trim (license.):block                                           )
+. endfor
+  ==========================================================================
+*/
+
+#include <string>
+#include <stdio.h>
+#include <unistd.h>
+#include "catch.hpp"
+#include "$(class.name).hpp"
+.for has_many
+#include "$(name).hpp"
+.endfor
+
+extern std::string db_url;
+
+TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
+    db_url  = "sqlite:";
+    db_url += tmpnam(NULL);
+    unlink(db_url.c_str());
+    $(class.Name)::reinit();
+.for has_many
+    $(Name)::reinit();
+.endfor
+
+    SECTION("Check that getters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        REQUIRE(test_a.get_$(name)() == "a");
+.else
+        REQUIRE(test_a.get_$(name)() == 1);
+.endif
+.endfor
+    }
+    SECTION("Check that setters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+.for property
+.if type = "string"
+        REQUIRE(test_a.get_$(name)() == "b");
+.else
+        REQUIRE(test_a.get_$(name)() == 2);
+.endif
+.endfor
+    }
+
+    SECTION("Check that comparison works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"
+.else
+            2
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        REQUIRE(test_a != test_b);
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that assignment works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"
+.else
+            2
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        REQUIRE(test_a != test_b);
+        test_a = test_b;
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that copy constructor works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        $(class.Name) test_b(test_a);
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that search works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"
+.else
+            2
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        std::vector<$(class.Name)> res;
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 2);
+        res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = 'b'"
+.else
+            "$(name) = 2"
+.endif
+.if !last()
+            " AND "
+.endif
+.endfor
+        );
+        REQUIRE(res.size() == 1);
+        REQUIRE(res[0] == test_b);
+        res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = :str"
+.else
+            "$(name) = :num"
+.endif
+.if !last()
+            " AND "
+.endif
+.endfor
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+        REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Getting members works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+.for has_many
+        REQUIRE(test_a.get_$(name)s().size() == 0);
+.endfor
+    }
+
+    SECTION("Serialization/deserialization works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"
+.else
+            1
+.endif
+.if !last()
+            ,
+.endif
+.endfor
+        );
+        cxxtools::SerializationInfo si;
+        test_a.serialize(si);
+        $(class.Name) test_b = $(class.Name)::deserialize(si);
+        REQUIRE(test_a == test_b);
+    }
+
+    unlink(db_url.c_str());
+}
+
