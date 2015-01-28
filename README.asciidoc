@@ -115,3 +115,6 @@ importantly, every method is documented ;-)
 
 Also you don't need to worry about database scheme as tables will be created
 during the first use of the class.
+
+If you are interested, see example folder where is an example of few simple
+xmls and of the generated code.

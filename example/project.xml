@@ -1,0 +1,14 @@
+<class
+    name = "Project"
+    title = "Project abstraction class"
+    script = "zxdb_cpp"
+    package_dir = "."
+    >
+
+<property   name="name"        type="string">Name of the project</property>
+<property   name="description" type="string">Description of the project</property>
+
+<has_many   name="file">Files this project contains</has_many>
+
+</class>
+

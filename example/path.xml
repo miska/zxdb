@@ -1,0 +1,13 @@
+<class
+    name = "Path"
+    title = "Path abstraction class"
+    script = "zxdb_cpp"
+    package_dir = "."
+    >
+
+<property name="url" type="string">Path to the file</property>
+
+<belongs_to name="file">File this path is manifestation of</belongs_to>
+
+</class>
+

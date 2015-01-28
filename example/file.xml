@@ -1,0 +1,14 @@
+<class
+    name = "File"
+    title = "File abstraction class"
+    script = "zxdb_cpp"
+    package_dir = "."
+    >
+
+<property   name="size" type="number" size="8">Size of the file</property>
+<property   name="hash" type="string">Hash of the file</property>
+
+<has_many   name="path">Paths on which this file can be found</has_many>
+<belongs_to name="project">Project this file belongs to</belongs_to>
+
+</class>
