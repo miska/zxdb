@@ -81,11 +81,11 @@ public:
             save();
     }
     //! Makes sure that table exists (called from constructor)
-    static void init();
+    static void db_init();
     //! Tells class to reinitialize database (if you do something really nasty)
-    static void reinit() {
+    static void db_reinit() {
         table_exists = false;
-        init();
+        db_init();
     }
     //! Save object into database
     virtual void save();
@@ -138,6 +138,9 @@ public:
     bool operator!=(const File& other) const {
         return !operator==(other);
     }
+    //! Deletes specified elements
+    static void remove(std::string where = "",
+	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void(File)> what,
         std::string where = "",

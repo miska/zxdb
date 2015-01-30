@@ -36,7 +36,7 @@ TEST_CASE( "Path works", "[path]" ) {
     db_url  = "sqlite:";
     db_url += tmpnam(NULL);
     unlink(db_url.c_str());
-    Path::reinit();
+    Path::db_reinit();
 
     SECTION("Check that getters works") {
         Path test_a(
@@ -108,6 +108,26 @@ TEST_CASE( "Path works", "[path]" ) {
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Check that remove works") {
+        Path test_a(
+            "a"
+        );
+        Path test_b(
+            "b"
+        );
+        std::vector<Path> res;
+        res = Path::search();
+        REQUIRE(res.size() == 2);
+		Path::remove(
+            "url = 'b'"
+        );
+        res = Path::search();
+        REQUIRE(res.size() == 1);
+		Path::remove();
+        res = Path::search();
+        REQUIRE(res.size() == 0);
     }
 
     SECTION("Getting members works") {

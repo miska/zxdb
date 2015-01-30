@@ -50,7 +50,7 @@ void File::save() {
 //! Get all paths belonging to this file
 std::vector<Path> File::get_paths() const {
     auto id = db_id;
-    Path::init();
+    Path::db_init();
     auto ret = Path::search("file_id = :file_id",
         [id](tntdb::Statement& st) { st.set("file_id", id); } );
     return ret;
@@ -112,7 +112,7 @@ bool File::operator==(const File& other) const {
 }
 
 //! Checks whether table exists and is correct
-void File::init() {
+void File::db_init() {
     if(table_exists)
         return;
 
@@ -177,7 +177,7 @@ File File::deserialize(const cxxtools::SerializationInfo& si) {
 File::File(
             const int64_t& in_size,
             const std::string& in_hash) {
-    init();
+    db_init();
     db_id = 0;
     dirty = false;
     size = in_size;
@@ -195,7 +195,7 @@ File::File(
                              "SELECT "
                              ":size, "
                              ":hash, "
-                             ":project_id"
+                             ":project_id "
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM file WHERE "
                              "size = :size AND "
@@ -229,7 +229,7 @@ void File::for_each(std::function<void(File)> what,
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -262,7 +262,7 @@ File File::get_by_id(uint64_t id) {
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -285,4 +285,23 @@ File File::get_by_id(uint64_t id) {
     return ret;
 }
 
+//! Deletes specified elements
+void File::remove(std::string where,
+    std::function<void(tntdb::Statement&)> set) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    db_init();
+
+    // Query data
+    std::string query = "DELETE FROM file";
+    if(!where.empty()) {
+        query += " WHERE ";
+        query += where;
+    }
+    smt = conn.prepareCached(query);
+    set(smt);
+	smt.execute();
+}
 

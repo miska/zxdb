@@ -37,8 +37,8 @@ TEST_CASE( "File works", "[file]" ) {
     db_url  = "sqlite:";
     db_url += tmpnam(NULL);
     unlink(db_url.c_str());
-    File::reinit();
-    Path::reinit();
+    File::db_reinit();
+    Path::db_reinit();
 
     SECTION("Check that getters works") {
         File test_a(
@@ -125,6 +125,29 @@ TEST_CASE( "File works", "[file]" ) {
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Check that remove works") {
+        File test_a(
+            1,
+            "a"
+        );
+        File test_b(
+            2,
+            "b"
+        );
+        std::vector<File> res;
+        res = File::search();
+        REQUIRE(res.size() == 2);
+		File::remove(
+            "size = 2 AND "
+            "hash = 'b'"
+        );
+        res = File::search();
+        REQUIRE(res.size() == 1);
+		File::remove();
+        res = File::search();
+        REQUIRE(res.size() == 0);
     }
 
     SECTION("Getting members works") {

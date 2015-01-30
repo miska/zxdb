@@ -49,7 +49,7 @@ void Project::save() {
 //! Get all files belonging to this project
 std::vector<File> Project::get_files() const {
     auto id = db_id;
-    File::init();
+    File::db_init();
     auto ret = File::search("project_id = :project_id",
         [id](tntdb::Statement& st) { st.set("project_id", id); } );
     return ret;
@@ -92,7 +92,7 @@ bool Project::operator==(const Project& other) const {
 }
 
 //! Checks whether table exists and is correct
-void Project::init() {
+void Project::db_init() {
     if(table_exists)
         return;
 
@@ -156,7 +156,7 @@ Project Project::deserialize(const cxxtools::SerializationInfo& si) {
 Project::Project(
             const std::string& in_name,
             const std::string& in_description) {
-    init();
+    db_init();
     db_id = 0;
     dirty = false;
     name = in_name;
@@ -203,7 +203,7 @@ void Project::for_each(std::function<void(Project)> what,
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -234,7 +234,7 @@ Project Project::get_by_id(uint64_t id) {
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -255,4 +255,23 @@ Project Project::get_by_id(uint64_t id) {
     return ret;
 }
 
+//! Deletes specified elements
+void Project::remove(std::string where,
+    std::function<void(tntdb::Statement&)> set) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    db_init();
+
+    // Query data
+    std::string query = "DELETE FROM project";
+    if(!where.empty()) {
+        query += " WHERE ";
+        query += where;
+    }
+    smt = conn.prepareCached(query);
+    set(smt);
+	smt.execute();
+}
 

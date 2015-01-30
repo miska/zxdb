@@ -37,8 +37,8 @@ TEST_CASE( "Project works", "[project]" ) {
     db_url  = "sqlite:";
     db_url += tmpnam(NULL);
     unlink(db_url.c_str());
-    Project::reinit();
-    File::reinit();
+    Project::db_reinit();
+    File::db_reinit();
 
     SECTION("Check that getters works") {
         Project test_a(
@@ -125,6 +125,29 @@ TEST_CASE( "Project works", "[project]" ) {
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Check that remove works") {
+        Project test_a(
+            "a",
+            "a"
+        );
+        Project test_b(
+            "b",
+            "b"
+        );
+        std::vector<Project> res;
+        res = Project::search();
+        REQUIRE(res.size() == 2);
+		Project::remove(
+            "name = 'b' AND "
+            "description = 'b'"
+        );
+        res = Project::search();
+        REQUIRE(res.size() == 1);
+		Project::remove();
+        res = Project::search();
+        REQUIRE(res.size() == 0);
     }
 
     SECTION("Getting members works") {

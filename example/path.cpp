@@ -82,7 +82,7 @@ bool Path::operator==(const Path& other) const {
 }
 
 //! Checks whether table exists and is correct
-void Path::init() {
+void Path::db_init() {
     if(table_exists)
         return;
 
@@ -124,7 +124,7 @@ Path Path::deserialize(const cxxtools::SerializationInfo& si) {
 //! Default constructor
 Path::Path(
             const std::string& in_url) {
-    init();
+    db_init();
     db_id = 0;
     dirty = false;
     url = in_url;
@@ -139,7 +139,7 @@ Path::Path(
                              "file_id ) "
                              "SELECT "
                              ":url, "
-                             ":file_id"
+                             ":file_id "
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM path WHERE "
                              "url = :url LIMIT 1)");
@@ -169,7 +169,7 @@ void Path::for_each(std::function<void(Path)> what,
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -200,7 +200,7 @@ Path Path::get_by_id(uint64_t id) {
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -221,4 +221,23 @@ Path Path::get_by_id(uint64_t id) {
     return ret;
 }
 
+//! Deletes specified elements
+void Path::remove(std::string where,
+    std::function<void(tntdb::Statement&)> set) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    db_init();
+
+    // Query data
+    std::string query = "DELETE FROM path";
+    if(!where.empty()) {
+        query += " WHERE ";
+        query += where;
+    }
+    smt = conn.prepareCached(query);
+    set(smt);
+	smt.execute();
+}
 

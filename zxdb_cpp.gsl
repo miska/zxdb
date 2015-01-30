@@ -166,11 +166,11 @@ public:
             save();
     }
     //! Makes sure that table exists (called from constructor)
-    static void init();
+    static void db_init();
     //! Tells class to reinitialize database (if you do something really nasty)
-    static void reinit() {
+    static void db_reinit() {
         table_exists = false;
-        init();
+        db_init();
     }
     //! Save object into database
     virtual void save();
@@ -234,6 +234,9 @@ public:
     bool operator!=(const $(class.Name)& other) const {
         return !operator==(other);
     }
+    //! Deletes specified elements
+    static void remove(std::string where = "",
+	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void($(class.Name))> what,
         std::string where = "",
@@ -318,7 +321,7 @@ void $(class.Name)::save() {
 //! Get all $(name)s belonging to this $(class.name)
 std::vector<$(Name)> $(class.Name)::get_$(name)s() const {
     auto id = db_id;
-    $(Name)::init();
+    $(Name)::db_init();
     auto ret = $(Name)::search("$(class.name)_id = :$(class.name)_id",
         [id](tntdb::Statement& st) { st.set("$(class.name)_id", id); } );
     return ret;
@@ -374,7 +377,7 @@ bool $(class.Name)::operator==(const $(class.Name)& other) const {
 }
 
 //! Checks whether table exists and is correct
-void $(class.Name)::init() {
+void $(class.Name)::db_init() {
     if(table_exists)
         return;
 
@@ -450,7 +453,7 @@ $(class.Name)::$(class.Name)(
 .for property
             const $(ctype)& in_$(name)$(last() ?? ") {" ? ",")
 .endfor
-    init();
+    db_init();
     db_id = 0;
     dirty = false;
 .for property
@@ -486,7 +489,7 @@ $(class.Name)::$(class.Name)(
 .endif
 .endfor
 .for belongs_to
-                             ":$(name)_id$(!last() ?? ", ")"
+                             ":$(name)_id$(!last() ?? ",") "
 .endfor
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM $(class.name) WHERE "
@@ -531,7 +534,7 @@ void $(class.Name)::for_each(std::function<void($(class.Name))> what,
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -570,7 +573,7 @@ $(class.Name) $(class.Name)::get_by_id(uint64_t id) {
     tntdb::Connection conn = tntdb::connectCached(db_url);
     tntdb::Statement smt;
 
-    init();
+    db_init();
 
     // Query data
     std::string query = "SELECT id "
@@ -599,6 +602,25 @@ $(class.Name) $(class.Name)::get_by_id(uint64_t id) {
     return ret;
 }
 
+//! Deletes specified elements
+void $(class.Name)::remove(std::string where,
+    std::function<void(tntdb::Statement&)> set) {
+
+    tntdb::Connection conn = tntdb::connectCached(db_url);
+    tntdb::Statement smt;
+
+    db_init();
+
+    // Query data
+    std::string query = "DELETE FROM $(class.name)";
+    if(!where.empty()) {
+        query += " WHERE ";
+        query += where;
+    }
+    smt = conn.prepareCached(query);
+    set(smt);
+	smt.execute();
+}
 
 .echo "Generating $(class.name)_test.cpp..."
 .output "$(class.name)_test.cpp"
@@ -646,9 +668,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
     db_url  = "sqlite:";
     db_url += tmpnam(NULL);
     unlink(db_url.c_str());
-    $(class.Name)::reinit();
+    $(class.Name)::db_reinit();
 .for has_many
-    $(Name)::reinit();
+    $(Name)::db_reinit();
 .endfor
 
     SECTION("Check that getters works") {
@@ -811,6 +833,44 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Check that remove works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"$(!last() ?? ",")
+.else
+            2$(!last() ?? ",")
+.endif
+.endfor
+        );
+        std::vector<$(class.Name)> res;
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 2);
+		$(class.Name)::remove(
+.for property
+.if type = "string"
+            "$(name) = 'b'$(!last() ?? " AND ")"
+.else
+            "$(name) = 2$(!last() ?? " AND ")"
+.endif
+.endfor
+        );
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 1);
+		$(class.Name)::remove();
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 0);
     }
 
     SECTION("Getting members works") {
