@@ -42,8 +42,7 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Check that getters works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         REQUIRE(test_a.get_size() == 1);
@@ -51,8 +50,7 @@ TEST_CASE( "File works", "[file]" ) {
     }
     SECTION("Check that setters works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         test_a.set_size(2);
@@ -63,13 +61,11 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Check that comparison works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         File test_b(
-            2
-            ,
+            2,
             "b"
         );
         REQUIRE(test_a != test_b);
@@ -80,13 +76,11 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Check that assignment works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         File test_b(
-            2
-            ,
+            2,
             "b"
         );
         REQUIRE(test_a != test_b);
@@ -96,8 +90,7 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Check that copy constructor works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         File test_b(test_a);
@@ -106,28 +99,24 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Check that search works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         File test_b(
-            2
-            ,
+            2,
             "b"
         );
         std::vector<File> res;
         res = File::search();
         REQUIRE(res.size() == 2);
         res = File::search(
-            "size = 2"
-            " AND "
+            "size = 2 AND "
             "hash = 'b'"
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
         res = File::search(
-            "size = :num"
-            " AND "
+            "size = :num AND "
             "hash = :str"
             ,
             [](tntdb::Statement& st) {
@@ -140,8 +129,7 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Getting members works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         REQUIRE(test_a.get_paths().size() == 0);
@@ -149,8 +137,7 @@ TEST_CASE( "File works", "[file]" ) {
 
     SECTION("Serialization/deserialization works") {
         File test_a(
-            1
-            ,
+            1,
             "a"
         );
         cxxtools::SerializationInfo si;

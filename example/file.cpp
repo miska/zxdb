@@ -195,7 +195,7 @@ File::File(
                              "SELECT "
                              ":size, "
                              ":hash, "
-                             ":project_id "
+                             ":project_id"
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM file WHERE "
                              "size = :size AND "
@@ -210,7 +210,6 @@ File::File(
     smt = conn.prepareCached("SELECT "
                              "  id "
                              ", project_id "
-
                              " FROM file WHERE "
                              "size = :size AND "
                              "hash = :hash LIMIT 1");

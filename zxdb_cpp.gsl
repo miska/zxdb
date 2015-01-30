@@ -201,11 +201,7 @@ public:
     //! Default constructor
     $(class.Name)(
 .for property
-.if !last()
-            const $(ctype)& in_$(name),
-.else
-            const $(ctype)& in_$(name)
-.endif
+            const $(ctype)& in_$(name)$(!last() ?? ",")
 .endfor
         );
     //! Copy constructor
@@ -224,18 +220,10 @@ public:
             db_id(other.db_id),
             dirty(other.dirty),
 .for property
-.if !last()
 .if type = "string"
-            $(name)(move(other.$(name))),
+            $(name)(move(other.$(name)))$(last() ?? " {}" ? ",")
 .else
-            $(name)(other.$(name)),
-.endif
-.else
-.if type = "string"
-            $(name)(move(other.$(name))) {}
-.else
-            $(name)(other.$(name)) {}
-.endif
+            $(name)(other.$(name))$(last() ?? " {}" ? ",")
 .endif
 .endfor
     //! Equality comparison
@@ -317,11 +305,7 @@ void $(class.Name)::save() {
     // Update stuff in databse
     smt = conn.prepareCached("UPDATE $(class.name) SET "
 .for property
-.if !last()
-                             "$(name) = :$(name), "
-.else
-                             "$(name) = :$(name) WHERE id = :id");
-.endif
+                             "$(name) = :$(name)$(last() ?? " WHERE id = :id\");" ? ", \"")
 .endfor
     smt
 .for property
@@ -385,11 +369,7 @@ $(ctype)  $(class.Name)::get_$(name)() const {
 bool $(class.Name)::operator==(const $(class.Name)& other) const {
     return
 .for property
-.if !last()
-        $(name) == (other.$(name)) &&
-.else
-        $(name) == (other.$(name));
-.endif
+        $(name) == (other.$(name))$(!last() ?? " &&" ? ";")
 .endfor
 }
 
@@ -450,11 +430,7 @@ $(class.Name) $(class.Name)::deserialize(const cxxtools::SerializationInfo& si) 
 .endfor
     $(class.Name) f(
 .for property
-.if last()
-        in_$(name)
-.else
-        in_$(name),
-.endif
+        in_$(name)$(!last() ?? ",")
 .endfor
     );
 .for has_many
@@ -472,11 +448,7 @@ $(class.Name) $(class.Name)::deserialize(const cxxtools::SerializationInfo& si) 
 //! Default constructor
 $(class.Name)::$(class.Name)(
 .for property
-.if !last()
-            const $(ctype)& in_$(name),
-.else
-            const $(ctype)& in_$(name)) {
-.endif
+            const $(ctype)& in_$(name)$(last() ?? ") {" ? ",")
 .endfor
     init();
     db_id = 0;
@@ -514,20 +486,12 @@ $(class.Name)::$(class.Name)(
 .endif
 .endfor
 .for belongs_to
-.if last()
-                             ":$(name)_id "
-.else
-                             ":$(name)_id, "
-.endif
+                             ":$(name)_id$(!last() ?? ", ")"
 .endfor
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM $(class.name) WHERE "
 .for property
-.if last()
-                             "$(name) = :$(name) LIMIT 1)");
-.else
-                             "$(name) = :$(name) AND "
-.endif
+                             "$(name) = :$(name)$(last() ?? " LIMIT 1)\");" ? " AND \"")
 .endfor
     smt
 .for property
@@ -544,14 +508,9 @@ $(class.Name)::$(class.Name)(
 .for belongs_to
                              ", $(name)_id "
 .endfor
-
                              " FROM $(class.name) WHERE "
 .for property
-.if !last()
-                             "$(name) = :$(name) AND "
-.else
-                             "$(name) = :$(name) LIMIT 1");
-.endif
+                             "$(name) = :$(name)$(last() ?? " LIMIT 1\");" ? " AND \"")
 .endfor
     row = smt
 .for property
@@ -696,12 +655,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -717,12 +673,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -746,24 +699,18 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
         $(class.Name) test_b(
 .for property
 .if type = "string"
-            "b"
+            "b"$(!last() ?? ",")
 .else
-            2
-.endif
-.if !last()
-            ,
+            2$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -782,24 +729,18 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
         $(class.Name) test_b(
 .for property
 .if type = "string"
-            "b"
+            "b"$(!last() ?? ",")
 .else
-            2
-.endif
-.if !last()
-            ,
+            2$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -812,12 +753,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -829,24 +767,18 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
         $(class.Name) test_b(
 .for property
 .if type = "string"
-            "b"
+            "b"$(!last() ?? ",")
 .else
-            2
-.endif
-.if !last()
-            ,
+            2$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -856,12 +788,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         res = $(class.Name)::search(
 .for property
 .if type = "string"
-            "$(name) = 'b'"
+            "$(name) = 'b'$(!last() ?? " AND ")"
 .else
-            "$(name) = 2"
-.endif
-.if !last()
-            " AND "
+            "$(name) = 2$(!last() ?? " AND ")"
 .endif
 .endfor
         );
@@ -870,12 +799,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         res = $(class.Name)::search(
 .for property
 .if type = "string"
-            "$(name) = :str"
+            "$(name) = :str$(!last() ?? " AND ")"
 .else
-            "$(name) = :num"
-.endif
-.if !last()
-            " AND "
+            "$(name) = :num$(!last() ?? " AND ")"
 .endif
 .endfor
             ,
@@ -891,12 +817,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );
@@ -909,12 +832,9 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         $(class.Name) test_a(
 .for property
 .if type = "string"
-            "a"
+            "a"$(!last() ?? ",")
 .else
-            1
-.endif
-.if !last()
-            ,
+            1$(!last() ?? ",")
 .endif
 .endfor
         );

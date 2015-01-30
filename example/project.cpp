@@ -185,7 +185,6 @@ Project::Project(
     // Get ID from the database
     smt = conn.prepareCached("SELECT "
                              "  id "
-
                              " FROM project WHERE "
                              "name = :name AND "
                              "description = :description LIMIT 1");

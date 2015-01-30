@@ -42,8 +42,7 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Check that getters works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         REQUIRE(test_a.get_name() == "a");
@@ -51,8 +50,7 @@ TEST_CASE( "Project works", "[project]" ) {
     }
     SECTION("Check that setters works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         test_a.set_name("b");
@@ -63,13 +61,11 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Check that comparison works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         Project test_b(
-            "b"
-            ,
+            "b",
             "b"
         );
         REQUIRE(test_a != test_b);
@@ -80,13 +76,11 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Check that assignment works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         Project test_b(
-            "b"
-            ,
+            "b",
             "b"
         );
         REQUIRE(test_a != test_b);
@@ -96,8 +90,7 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Check that copy constructor works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         Project test_b(test_a);
@@ -106,28 +99,24 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Check that search works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         Project test_b(
-            "b"
-            ,
+            "b",
             "b"
         );
         std::vector<Project> res;
         res = Project::search();
         REQUIRE(res.size() == 2);
         res = Project::search(
-            "name = 'b'"
-            " AND "
+            "name = 'b' AND "
             "description = 'b'"
         );
         REQUIRE(res.size() == 1);
         REQUIRE(res[0] == test_b);
         res = Project::search(
-            "name = :str"
-            " AND "
+            "name = :str AND "
             "description = :str"
             ,
             [](tntdb::Statement& st) {
@@ -140,8 +129,7 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Getting members works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         REQUIRE(test_a.get_files().size() == 0);
@@ -149,8 +137,7 @@ TEST_CASE( "Project works", "[project]" ) {
 
     SECTION("Serialization/deserialization works") {
         Project test_a(
-            "a"
-            ,
+            "a",
             "a"
         );
         cxxtools::SerializationInfo si;

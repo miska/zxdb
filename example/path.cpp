@@ -139,7 +139,7 @@ Path::Path(
                              "file_id ) "
                              "SELECT "
                              ":url, "
-                             ":file_id "
+                             ":file_id"
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM path WHERE "
                              "url = :url LIMIT 1)");
@@ -152,7 +152,6 @@ Path::Path(
     smt = conn.prepareCached("SELECT "
                              "  id "
                              ", file_id "
-
                              " FROM path WHERE "
                              "url = :url LIMIT 1");
     row = smt
