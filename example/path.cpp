@@ -37,10 +37,15 @@ void Path::save() {
     tntdb::Statement smt;
 
     // Update stuff in databse
-    smt = conn.prepareCached("UPDATE path SET "
-                             "url = :url WHERE id = :id");
+    smt = conn.prepareCached("UPDATE paths SET "
+                             "url = :url "
+                             ","
+                             "file_id = :file_id "
+                             " WHERE id = :id");
     smt
         .set("url", url)
+        .set("file_id", file_id)
+        .set("id", db_id)
         .execute();
 }
 
@@ -57,10 +62,12 @@ uint64_t Path::get_parent_file_id() const {
 
 //! Set parent file
 void Path::set_parent_file(const File parent) {
+    set_parent_file_id(parent.get_db_id());
 }
 
 //! Get parent file
 File Path::get_parent_file() const {
+    return File::get_by_id(get_parent_file_id());
 }
 
 //! Setter for url
@@ -90,7 +97,7 @@ void Path::db_init() {
     tntdb::Statement smt;
 
     // Create database if does not exist
-    smt = conn.prepare("CREATE TABLE IF NOT EXISTS path ( "
+    smt = conn.prepare("CREATE TABLE IF NOT EXISTS paths ( "
                        "id INTEGER PRIMARY KEY AUTOINCREMENT "
                        ", url TEXT "
                        ", file_id INTEGER DEFAULT 0"
@@ -101,9 +108,10 @@ void Path::db_init() {
 }
 
 //! Assignment operator
-bool Path::operator=(const Path& other) {
+Path& Path::operator=(const Path& other) {
     url = other.url;
     dirty = true;
+    return (*this);
 }
 
 //! Exporting structure for future import
@@ -134,14 +142,14 @@ Path::Path(
     tntdb::Row row;
 
     // Add into database if doesn't exists
-    smt = conn.prepareCached("INSERT INTO path ( "
+    smt = conn.prepareCached("INSERT INTO paths ( "
                              "url, "
                              "file_id ) "
                              "SELECT "
                              ":url, "
                              ":file_id "
                              "WHERE 1 NOT IN "
-                             "(SELECT 1 FROM path WHERE "
+                             "(SELECT 1 FROM paths WHERE "
                              "url = :url LIMIT 1)");
     smt
         .set("url", url)
@@ -152,7 +160,7 @@ Path::Path(
     smt = conn.prepareCached("SELECT "
                              "  id "
                              ", file_id "
-                             " FROM path WHERE "
+                             " FROM paths WHERE "
                              "url = :url LIMIT 1");
     row = smt
         .set("url", url)
@@ -175,7 +183,7 @@ void Path::for_each(std::function<void(Path)> what,
     std::string query = "SELECT id "
                              ", url "
                              ", file_id "
-                             " FROM path ";
+                             " FROM paths ";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
@@ -206,7 +214,7 @@ Path Path::get_by_id(uint64_t id) {
     std::string query = "SELECT id "
                              ", url "
                              ", file_id "
-                             " FROM path "
+                             " FROM paths "
                              " WHERE id = :id ";
     smt = conn.prepareCached(query);
     smt.set("id", id);
@@ -231,13 +239,13 @@ void Path::remove(std::string where,
     db_init();
 
     // Query data
-    std::string query = "DELETE FROM path";
+    std::string query = "DELETE FROM paths";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
     }
     smt = conn.prepareCached(query);
     set(smt);
-	smt.execute();
+    smt.execute();
 }
 

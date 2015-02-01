@@ -42,6 +42,13 @@ TEST_CASE( "Path works", "[path]" ) {
         Path test_a(
             "a"
         );
+        REQUIRE(test_a.get_db_id() != 0);
+    }
+
+    SECTION("Check that getters works") {
+        Path test_a(
+            "a"
+        );
         REQUIRE(test_a.get_url() == "a");
     }
     SECTION("Check that setters works") {
@@ -110,6 +117,23 @@ TEST_CASE( "Path works", "[path]" ) {
         REQUIRE(res[0] == test_b);
     }
 
+    SECTION("Check that setters works reliably") {
+		{
+        Path test_a(
+            "a"
+        );
+        test_a.set_url("b");
+		}
+        auto res = Path::search(
+            "url = :str"
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+    }
+
     SECTION("Check that remove works") {
         Path test_a(
             "a"
@@ -120,12 +144,12 @@ TEST_CASE( "Path works", "[path]" ) {
         std::vector<Path> res;
         res = Path::search();
         REQUIRE(res.size() == 2);
-		Path::remove(
+        Path::remove(
             "url = 'b'"
         );
         res = Path::search();
         REQUIRE(res.size() == 1);
-		Path::remove();
+        Path::remove();
         res = Path::search();
         REQUIRE(res.size() == 0);
     }

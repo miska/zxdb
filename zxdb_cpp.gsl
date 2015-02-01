@@ -29,11 +29,11 @@
 .        elsif property.size = 2
 .            if property.signed = "yes"
 .                property.ctype = "int16_t"
-.                property.tnttype = "Int16"
+.                property.tnttype = "Int32"
 .                property.sqltype = "SMALLINT"
 .            else
 .                property.ctype = "uint64_t"
-.                property.tnttype = "Unsigned16"
+.                property.tnttype = "Unsigned32"
 .                property.sqltype = "SMALLINT UNSIGNED"
 .            endif
 .        elsif property.size = 8
@@ -123,20 +123,6 @@ private:
     //! $(belongs_to:)
     uint64_t $(name)_id;
 .endfor
-    //! Private constructor purely for deserializer
-    $(class.Name)():
-              db_id(0)
-.for property
-.if type = "string"
-            , $(name)("")
-.else
-            , $(name)(0)
-.endif
-.endfor
-.for belongs_to
-            , $(name)_id(0)
-.endfor
-            {}
     //! Private constructor directly from database
     $(class.Name)(
               const uint64_t& in_db_id
@@ -156,10 +142,9 @@ private:
             , $(name)_id(in_$(name)_id)
 .endfor
             {}
+public:
     //! Returns element specified by it's database id
     static $(class.Name) get_by_id(uint64_t id);
-
-public:
     //! Destructor
     virtual ~$(class.Name)() {
         if(dirty)
@@ -175,7 +160,7 @@ public:
     //! Save object into database
     virtual void save();
     //! Returns unique database id
-    virtual uint64_t get_db_id() { return db_id; }
+    virtual uint64_t get_db_id() const { return db_id; }
 .for property
     //! Setter for $(name)
     virtual $(ctype)& set_$(name)(const $(ctype));
@@ -201,7 +186,14 @@ public:
     //! Default constructor
     $(class.Name)(
 .for property
+.if !defined(default)
             const $(ctype)& in_$(name)$(!last() ?? ",")
+.endif
+.endfor
+.for property
+.if defined(default)
+            const $(ctype)& in_$(name) = $(default:)$(!last() ?? ",")
+.endif
 .endfor
         );
     //! Copy constructor
@@ -229,14 +221,14 @@ public:
     //! Equality comparison
     virtual bool operator==(const $(class.Name)& other) const;
     //! Assignment operator
-    virtual bool operator=(const $(class.Name)& other);
+    virtual $(class.Name)& operator=(const $(class.Name)& other);
     //! Inequality comparison
     bool operator!=(const $(class.Name)& other) const {
         return !operator==(other);
     }
     //! Deletes specified elements
     static void remove(std::string where = "",
-	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void($(class.Name))> what,
         std::string where = "",
@@ -306,14 +298,25 @@ void $(class.Name)::save() {
     tntdb::Statement smt;
 
     // Update stuff in databse
-    smt = conn.prepareCached("UPDATE $(class.name) SET "
+    smt = conn.prepareCached("UPDATE $(class.name)s SET "
 .for property
-                             "$(name) = :$(name)$(last() ?? " WHERE id = :id\");" ? ", \"")
+                             "$(name) = :$(name) "
+.if !last() | count(class.belongs_to) > 0
+                             ","
+.endif
 .endfor
+.for belongs_to
+                             "$(name)_id = :$(name)_id$(!last() ?? ",") "
+.endfor
+                             " WHERE id = :id\");
     smt
 .for property
         .set("$(name)", $(name))
 .endfor
+.for belongs_to
+        .set("$(name)_id", $(name)_id)
+.endfor
+        .set("id", db_id)
         .execute();
 }
 
@@ -347,10 +350,12 @@ uint64_t $(class.Name)::get_parent_$(name)_id() const {
 
 //! Set parent $(name)
 void $(class.Name)::set_parent_$(name)(const $(Name) parent) {
+    set_parent_$(name)_id(parent.get_db_id());
 }
 
 //! Get parent $(name)
 $(Name) $(class.Name)::get_parent_$(name)() const {
+    return $(Name)::get_by_id(get_parent_$(name)_id());
 }
 
 .endfor
@@ -385,7 +390,7 @@ void $(class.Name)::db_init() {
     tntdb::Statement smt;
 
     // Create database if does not exist
-    smt = conn.prepare("CREATE TABLE IF NOT EXISTS $(class.name) ( "
+    smt = conn.prepare("CREATE TABLE IF NOT EXISTS $(class.name)s ( "
                        "id INTEGER PRIMARY KEY AUTOINCREMENT "
 .for property
                        ", $(name) $(SQLTYPE) "
@@ -400,11 +405,12 @@ void $(class.Name)::db_init() {
 }
 
 //! Assignment operator
-bool $(class.Name)::operator=(const $(class.Name)& other) {
+$(class.Name)& $(class.Name)::operator=(const $(class.Name)& other) {
 .for property
     $(name) = other.$(name);
 .endfor
     dirty = true;
+    return (*this);
 }
 
 //! Exporting structure for future import
@@ -465,7 +471,7 @@ $(class.Name)::$(class.Name)(
     tntdb::Row row;
 
     // Add into database if doesn't exists
-    smt = conn.prepareCached("INSERT INTO $(class.name) ( "
+    smt = conn.prepareCached("INSERT INTO $(class.name)s ( "
 .for property
 .if last() & count(class.belongs_to) = 0
                              "$(name) ) "
@@ -492,7 +498,7 @@ $(class.Name)::$(class.Name)(
                              ":$(name)_id$(!last() ?? ",") "
 .endfor
                              "WHERE 1 NOT IN "
-                             "(SELECT 1 FROM $(class.name) WHERE "
+                             "(SELECT 1 FROM $(class.name)s WHERE "
 .for property
                              "$(name) = :$(name)$(last() ?? " LIMIT 1)\");" ? " AND \"")
 .endfor
@@ -511,7 +517,7 @@ $(class.Name)::$(class.Name)(
 .for belongs_to
                              ", $(name)_id "
 .endfor
-                             " FROM $(class.name) WHERE "
+                             " FROM $(class.name)s WHERE "
 .for property
                              "$(name) = :$(name)$(last() ?? " LIMIT 1\");" ? " AND \"")
 .endfor
@@ -544,7 +550,7 @@ void $(class.Name)::for_each(std::function<void($(class.Name))> what,
 .for belongs_to
                              ", $(name)_id "
 .endfor
-                             " FROM $(class.name) ";
+                             " FROM $(class.name)s ";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
@@ -583,7 +589,7 @@ $(class.Name) $(class.Name)::get_by_id(uint64_t id) {
 .for belongs_to
                              ", $(name)_id "
 .endfor
-                             " FROM $(class.name) "
+                             " FROM $(class.name)s "
                              " WHERE id = :id ";
     smt = conn.prepareCached(query);
     smt.set("id", id);
@@ -612,14 +618,14 @@ void $(class.Name)::remove(std::string where,
     db_init();
 
     // Query data
-    std::string query = "DELETE FROM $(class.name)";
+    std::string query = "DELETE FROM $(class.name)s";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
     }
     smt = conn.prepareCached(query);
     set(smt);
-	smt.execute();
+    smt.execute();
 }
 
 .echo "Generating $(class.name)_test.cpp..."
@@ -672,6 +678,19 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
 .for has_many
     $(Name)::db_reinit();
 .endfor
+
+    SECTION("Check that getters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        REQUIRE(test_a.get_db_id() != 0);
+    }
 
     SECTION("Check that getters works") {
         $(class.Name) test_a(
@@ -835,6 +854,41 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         REQUIRE(res[0] == test_b);
     }
 
+    SECTION("Check that setters works reliably") {
+		{
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+		}
+        auto res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = :str$(!last() ?? " AND ")"
+.else
+            "$(name) = :num$(!last() ?? " AND ")"
+.endif
+.endfor
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+    }
+
     SECTION("Check that remove works") {
         $(class.Name) test_a(
 .for property
@@ -857,7 +911,7 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         std::vector<$(class.Name)> res;
         res = $(class.Name)::search();
         REQUIRE(res.size() == 2);
-		$(class.Name)::remove(
+        $(class.Name)::remove(
 .for property
 .if type = "string"
             "$(name) = 'b'$(!last() ?? " AND ")"
@@ -868,7 +922,7 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         );
         res = $(class.Name)::search();
         REQUIRE(res.size() == 1);
-		$(class.Name)::remove();
+        $(class.Name)::remove();
         res = $(class.Name)::search();
         REQUIRE(res.size() == 0);
     }

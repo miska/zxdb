@@ -51,13 +51,6 @@ private:
     std::string hash;
     //! Project this file belongs to
     uint64_t project_id;
-    //! Private constructor purely for deserializer
-    File():
-              db_id(0)
-            , size(0)
-            , hash("")
-            , project_id(0)
-            {}
     //! Private constructor directly from database
     File(
               const uint64_t& in_db_id
@@ -71,10 +64,9 @@ private:
             , hash(in_hash)
             , project_id(in_project_id)
             {}
+public:
     //! Returns element specified by it's database id
     static File get_by_id(uint64_t id);
-
-public:
     //! Destructor
     virtual ~File() {
         if(dirty)
@@ -90,7 +82,7 @@ public:
     //! Save object into database
     virtual void save();
     //! Returns unique database id
-    virtual uint64_t get_db_id() { return db_id; }
+    virtual uint64_t get_db_id() const { return db_id; }
     //! Setter for size
     virtual int64_t& set_size(const int64_t);
     //! Getter for size
@@ -133,14 +125,14 @@ public:
     //! Equality comparison
     virtual bool operator==(const File& other) const;
     //! Assignment operator
-    virtual bool operator=(const File& other);
+    virtual File& operator=(const File& other);
     //! Inequality comparison
     bool operator!=(const File& other) const {
         return !operator==(other);
     }
     //! Deletes specified elements
     static void remove(std::string where = "",
-	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void(File)> what,
         std::string where = "",

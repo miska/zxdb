@@ -48,12 +48,6 @@ private:
     std::string name;
     //! Description of the project
     std::string description;
-    //! Private constructor purely for deserializer
-    Project():
-              db_id(0)
-            , name("")
-            , description("")
-            {}
     //! Private constructor directly from database
     Project(
               const uint64_t& in_db_id
@@ -65,10 +59,9 @@ private:
             , name(in_name)
             , description(in_description)
             {}
+public:
     //! Returns element specified by it's database id
     static Project get_by_id(uint64_t id);
-
-public:
     //! Destructor
     virtual ~Project() {
         if(dirty)
@@ -84,7 +77,7 @@ public:
     //! Save object into database
     virtual void save();
     //! Returns unique database id
-    virtual uint64_t get_db_id() { return db_id; }
+    virtual uint64_t get_db_id() const { return db_id; }
     //! Setter for name
     virtual std::string& set_name(const std::string);
     //! Getter for name
@@ -118,14 +111,14 @@ public:
     //! Equality comparison
     virtual bool operator==(const Project& other) const;
     //! Assignment operator
-    virtual bool operator=(const Project& other);
+    virtual Project& operator=(const Project& other);
     //! Inequality comparison
     bool operator!=(const Project& other) const {
         return !operator==(other);
     }
     //! Deletes specified elements
     static void remove(std::string where = "",
-	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void(Project)> what,
         std::string where = "",

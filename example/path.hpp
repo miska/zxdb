@@ -48,12 +48,6 @@ private:
     std::string url;
     //! File this path is manifestation of
     uint64_t file_id;
-    //! Private constructor purely for deserializer
-    Path():
-              db_id(0)
-            , url("")
-            , file_id(0)
-            {}
     //! Private constructor directly from database
     Path(
               const uint64_t& in_db_id
@@ -65,10 +59,9 @@ private:
             , url(in_url)
             , file_id(in_file_id)
             {}
+public:
     //! Returns element specified by it's database id
     static Path get_by_id(uint64_t id);
-
-public:
     //! Destructor
     virtual ~Path() {
         if(dirty)
@@ -84,7 +77,7 @@ public:
     //! Save object into database
     virtual void save();
     //! Returns unique database id
-    virtual uint64_t get_db_id() { return db_id; }
+    virtual uint64_t get_db_id() const { return db_id; }
     //! Setter for url
     virtual std::string& set_url(const std::string);
     //! Getter for url
@@ -116,14 +109,14 @@ public:
     //! Equality comparison
     virtual bool operator==(const Path& other) const;
     //! Assignment operator
-    virtual bool operator=(const Path& other);
+    virtual Path& operator=(const Path& other);
     //! Inequality comparison
     bool operator!=(const Path& other) const {
         return !operator==(other);
     }
     //! Deletes specified elements
     static void remove(std::string where = "",
-	    std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
     //! Runs specified function on every matching element
     static void for_each(std::function<void(Path)> what,
         std::string where = "",

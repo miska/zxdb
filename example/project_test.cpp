@@ -45,6 +45,14 @@ TEST_CASE( "Project works", "[project]" ) {
             "a",
             "a"
         );
+        REQUIRE(test_a.get_db_id() != 0);
+    }
+
+    SECTION("Check that getters works") {
+        Project test_a(
+            "a",
+            "a"
+        );
         REQUIRE(test_a.get_name() == "a");
         REQUIRE(test_a.get_description() == "a");
     }
@@ -127,6 +135,26 @@ TEST_CASE( "Project works", "[project]" ) {
         REQUIRE(res[0] == test_b);
     }
 
+    SECTION("Check that setters works reliably") {
+		{
+        Project test_a(
+            "a",
+            "a"
+        );
+        test_a.set_name("b");
+        test_a.set_description("b");
+		}
+        auto res = Project::search(
+            "name = :str AND "
+            "description = :str"
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+    }
+
     SECTION("Check that remove works") {
         Project test_a(
             "a",
@@ -139,13 +167,13 @@ TEST_CASE( "Project works", "[project]" ) {
         std::vector<Project> res;
         res = Project::search();
         REQUIRE(res.size() == 2);
-		Project::remove(
+        Project::remove(
             "name = 'b' AND "
             "description = 'b'"
         );
         res = Project::search();
         REQUIRE(res.size() == 1);
-		Project::remove();
+        Project::remove();
         res = Project::search();
         REQUIRE(res.size() == 0);
     }

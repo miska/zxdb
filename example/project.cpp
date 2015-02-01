@@ -37,12 +37,15 @@ void Project::save() {
     tntdb::Statement smt;
 
     // Update stuff in databse
-    smt = conn.prepareCached("UPDATE project SET "
-                             "name = :name, "
-                             "description = :description WHERE id = :id");
+    smt = conn.prepareCached("UPDATE projects SET "
+                             "name = :name "
+                             ","
+                             "description = :description "
+                             " WHERE id = :id");
     smt
         .set("name", name)
         .set("description", description)
+        .set("id", db_id)
         .execute();
 }
 
@@ -100,7 +103,7 @@ void Project::db_init() {
     tntdb::Statement smt;
 
     // Create database if does not exist
-    smt = conn.prepare("CREATE TABLE IF NOT EXISTS project ( "
+    smt = conn.prepare("CREATE TABLE IF NOT EXISTS projects ( "
                        "id INTEGER PRIMARY KEY AUTOINCREMENT "
                        ", name TEXT "
                        ", description TEXT "
@@ -111,10 +114,11 @@ void Project::db_init() {
 }
 
 //! Assignment operator
-bool Project::operator=(const Project& other) {
+Project& Project::operator=(const Project& other) {
     name = other.name;
     description = other.description;
     dirty = true;
+    return (*this);
 }
 
 //! Exporting structure for future import
@@ -167,14 +171,14 @@ Project::Project(
     tntdb::Row row;
 
     // Add into database if doesn't exists
-    smt = conn.prepareCached("INSERT INTO project ( "
+    smt = conn.prepareCached("INSERT INTO projects ( "
                              "name, "
                              "description ) "
                              "SELECT "
                              ":name, "
                              ":description "
                              "WHERE 1 NOT IN "
-                             "(SELECT 1 FROM project WHERE "
+                             "(SELECT 1 FROM projects WHERE "
                              "name = :name AND "
                              "description = :description LIMIT 1)");
     smt
@@ -185,7 +189,7 @@ Project::Project(
     // Get ID from the database
     smt = conn.prepareCached("SELECT "
                              "  id "
-                             " FROM project WHERE "
+                             " FROM projects WHERE "
                              "name = :name AND "
                              "description = :description LIMIT 1");
     row = smt
@@ -209,7 +213,7 @@ void Project::for_each(std::function<void(Project)> what,
     std::string query = "SELECT id "
                              ", name "
                              ", description "
-                             " FROM project ";
+                             " FROM projects ";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
@@ -240,7 +244,7 @@ Project Project::get_by_id(uint64_t id) {
     std::string query = "SELECT id "
                              ", name "
                              ", description "
-                             " FROM project "
+                             " FROM projects "
                              " WHERE id = :id ";
     smt = conn.prepareCached(query);
     smt.set("id", id);
@@ -265,13 +269,13 @@ void Project::remove(std::string where,
     db_init();
 
     // Query data
-    std::string query = "DELETE FROM project";
+    std::string query = "DELETE FROM projects";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
     }
     smt = conn.prepareCached(query);
     set(smt);
-	smt.execute();
+    smt.execute();
 }
 

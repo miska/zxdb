@@ -38,12 +38,18 @@ void File::save() {
     tntdb::Statement smt;
 
     // Update stuff in databse
-    smt = conn.prepareCached("UPDATE file SET "
-                             "size = :size, "
-                             "hash = :hash WHERE id = :id");
+    smt = conn.prepareCached("UPDATE files SET "
+                             "size = :size "
+                             ","
+                             "hash = :hash "
+                             ","
+                             "project_id = :project_id "
+                             " WHERE id = :id");
     smt
         .set("size", size)
         .set("hash", hash)
+        .set("project_id", project_id)
+        .set("id", db_id)
         .execute();
 }
 
@@ -74,10 +80,12 @@ uint64_t File::get_parent_project_id() const {
 
 //! Set parent project
 void File::set_parent_project(const Project parent) {
+    set_parent_project_id(parent.get_db_id());
 }
 
 //! Get parent project
 Project File::get_parent_project() const {
+    return Project::get_by_id(get_parent_project_id());
 }
 
 //! Setter for size
@@ -120,7 +128,7 @@ void File::db_init() {
     tntdb::Statement smt;
 
     // Create database if does not exist
-    smt = conn.prepare("CREATE TABLE IF NOT EXISTS file ( "
+    smt = conn.prepare("CREATE TABLE IF NOT EXISTS files ( "
                        "id INTEGER PRIMARY KEY AUTOINCREMENT "
                        ", size BIGINT "
                        ", hash TEXT "
@@ -132,10 +140,11 @@ void File::db_init() {
 }
 
 //! Assignment operator
-bool File::operator=(const File& other) {
+File& File::operator=(const File& other) {
     size = other.size;
     hash = other.hash;
     dirty = true;
+    return (*this);
 }
 
 //! Exporting structure for future import
@@ -188,7 +197,7 @@ File::File(
     tntdb::Row row;
 
     // Add into database if doesn't exists
-    smt = conn.prepareCached("INSERT INTO file ( "
+    smt = conn.prepareCached("INSERT INTO files ( "
                              "size, "
                              "hash, "
                              "project_id ) "
@@ -197,7 +206,7 @@ File::File(
                              ":hash, "
                              ":project_id "
                              "WHERE 1 NOT IN "
-                             "(SELECT 1 FROM file WHERE "
+                             "(SELECT 1 FROM files WHERE "
                              "size = :size AND "
                              "hash = :hash LIMIT 1)");
     smt
@@ -210,7 +219,7 @@ File::File(
     smt = conn.prepareCached("SELECT "
                              "  id "
                              ", project_id "
-                             " FROM file WHERE "
+                             " FROM files WHERE "
                              "size = :size AND "
                              "hash = :hash LIMIT 1");
     row = smt
@@ -236,7 +245,7 @@ void File::for_each(std::function<void(File)> what,
                              ", size "
                              ", hash "
                              ", project_id "
-                             " FROM file ";
+                             " FROM files ";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
@@ -269,7 +278,7 @@ File File::get_by_id(uint64_t id) {
                              ", size "
                              ", hash "
                              ", project_id "
-                             " FROM file "
+                             " FROM files "
                              " WHERE id = :id ";
     smt = conn.prepareCached(query);
     smt.set("id", id);
@@ -295,13 +304,13 @@ void File::remove(std::string where,
     db_init();
 
     // Query data
-    std::string query = "DELETE FROM file";
+    std::string query = "DELETE FROM files";
     if(!where.empty()) {
         query += " WHERE ";
         query += where;
     }
     smt = conn.prepareCached(query);
     set(smt);
-	smt.execute();
+    smt.execute();
 }
 

@@ -45,6 +45,14 @@ TEST_CASE( "File works", "[file]" ) {
             1,
             "a"
         );
+        REQUIRE(test_a.get_db_id() != 0);
+    }
+
+    SECTION("Check that getters works") {
+        File test_a(
+            1,
+            "a"
+        );
         REQUIRE(test_a.get_size() == 1);
         REQUIRE(test_a.get_hash() == "a");
     }
@@ -127,6 +135,26 @@ TEST_CASE( "File works", "[file]" ) {
         REQUIRE(res[0] == test_b);
     }
 
+    SECTION("Check that setters works reliably") {
+		{
+        File test_a(
+            1,
+            "a"
+        );
+        test_a.set_size(2);
+        test_a.set_hash("b");
+		}
+        auto res = File::search(
+            "size = :num AND "
+            "hash = :str"
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+    }
+
     SECTION("Check that remove works") {
         File test_a(
             1,
@@ -139,13 +167,13 @@ TEST_CASE( "File works", "[file]" ) {
         std::vector<File> res;
         res = File::search();
         REQUIRE(res.size() == 2);
-		File::remove(
+        File::remove(
             "size = 2 AND "
             "hash = 'b'"
         );
         res = File::search();
         REQUIRE(res.size() == 1);
-		File::remove();
+        File::remove();
         res = File::search();
         REQUIRE(res.size() == 0);
     }
