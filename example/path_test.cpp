@@ -170,6 +170,14 @@ TEST_CASE( "Path works", "[path]" ) {
         REQUIRE(test_a == test_b);
     }
 
+    SECTION("Get by id works with empty strings") {
+        Path test_a(
+            ""
+        );
+        Path test_b = Path::get_by_id(test_a.get_db_id());
+        REQUIRE(test_a == test_b);
+    }
+
     unlink(db_url.c_str());
 }
 

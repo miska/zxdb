@@ -125,12 +125,12 @@ private:
 .endfor
     //! Private constructor directly from database
     $(class.Name)(
-              const uint64_t& in_db_id
+              const uint64_t in_db_id
 .for property
-            , const $(ctype)& in_$(name)
+            , const $(ctype) in_$(name)
 .endfor
 .for belongs_to
-            , uint64_t in_$(name)_id
+            , const uint64_t in_$(name)_id
 .endfor
             ) :
               db_id(in_db_id)
@@ -188,10 +188,7 @@ public:
 .for property
 .if !defined(default)
             const $(ctype)& in_$(name)$(!last() ?? ",")
-.endif
-.endfor
-.for property
-.if defined(default)
+.else
             const $(ctype)& in_$(name) = $(default:)$(!last() ?? ",")
 .endif
 .endfor
@@ -209,15 +206,19 @@ public:
             {}
     //! Move constructor
     $(class.Name)(const $(class.Name)&& other) :
-            db_id(other.db_id),
-            dirty(other.dirty),
+              db_id(other.db_id)
+            , dirty(other.dirty)
 .for property
 .if type = "string"
-            $(name)(move(other.$(name)))$(last() ?? " {}" ? ",")
+            , $(name)(move(other.$(name)))
 .else
-            $(name)(other.$(name))$(last() ?? " {}" ? ",")
+            , $(name)(other.$(name))
 .endif
 .endfor
+.for belongs_to
+            , $(name)_id(other.$(name)_id)
+.endfor
+			{}
     //! Equality comparison
     virtual bool operator==(const $(class.Name)& other) const;
     //! Assignment operator
@@ -419,15 +420,15 @@ void $(class.Name)::serialize(cxxtools::SerializationInfo& si) {
     si.addMember("$(name)").setValue(get_$(name)());
 .endfor
 .for has_many
-    auto nsi = si.addMember("$(name)");
-    nsi.setTypeName("set");
-    nsi.setCategory(cxxtools::SerializationInfo::Array);
+    cxxtools::SerializationInfo& nsi = si.addMember("$(name)");
     {
         auto list = get_$(name)s();
         for(auto i: list) {
             i.serialize(nsi.addMember(""));
         }
     }
+    nsi.setTypeName("set");
+    nsi.setCategory(cxxtools::SerializationInfo::Array);
 .endfor
 }
 
@@ -480,11 +481,7 @@ $(class.Name)::$(class.Name)(
 .endif
 .endfor
 .for belongs_to
-.if last()
-                             "$(name)_id ) "
-.else
-                             "$(name)_id, "
-.endif
+                             "$(name)_id$(last() ?? ")" ? ",") "
 .endfor
                              "SELECT "
 .for property
@@ -495,7 +492,7 @@ $(class.Name)::$(class.Name)(
 .endif
 .endfor
 .for belongs_to
-                             ":$(name)_id$(!last() ?? ",") "
+                             "0$(!last() ?? ",") "
 .endfor
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM $(class.name)s WHERE "
@@ -505,9 +502,6 @@ $(class.Name)::$(class.Name)(
     smt
 .for property
         .set("$(name)", $(name))
-.endfor
-.for belongs_to
-        .set("$(name)_id", $(name)_id)
 .endfor
         .execute();
 
@@ -599,7 +593,11 @@ $(class.Name) $(class.Name)::get_by_id(uint64_t id) {
     $(class.Name) ret(
               row.getUnsigned64("id")
 .for property
+.if tnttype = "String"
+            , row.isNull("$(name)") ? "" : row.get$(tnttype:)("$(name)")
+.else
             , row.get$(tnttype:)("$(name)")
+.endif
 .endfor
 .for belongs_to
             , row.getUnsigned64("$(name)_id")
@@ -955,6 +953,20 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         cxxtools::SerializationInfo si;
         test_a.serialize(si);
         $(class.Name) test_b = $(class.Name)::deserialize(si);
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Get by id works with empty strings") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            ""$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b = $(class.Name)::get_by_id(test_a.get_db_id());
         REQUIRE(test_a == test_b);
     }
 

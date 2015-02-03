@@ -125,15 +125,15 @@ Project& Project::operator=(const Project& other) {
 void Project::serialize(cxxtools::SerializationInfo& si) {
     si.addMember("name").setValue(get_name());
     si.addMember("description").setValue(get_description());
-    auto nsi = si.addMember("file");
-    nsi.setTypeName("set");
-    nsi.setCategory(cxxtools::SerializationInfo::Array);
+    cxxtools::SerializationInfo& nsi = si.addMember("file");
     {
         auto list = get_files();
         for(auto i: list) {
             i.serialize(nsi.addMember(""));
         }
     }
+    nsi.setTypeName("set");
+    nsi.setCategory(cxxtools::SerializationInfo::Array);
 }
 
 //! Importing previously exported structure
@@ -253,8 +253,8 @@ Project Project::get_by_id(uint64_t id) {
     auto row = smt.selectRow();
     Project ret(
               row.getUnsigned64("id")
-            , row.getString("name")
-            , row.getString("description")
+            , row.isNull("name") ? "" : row.getString("name")
+            , row.isNull("description") ? "" : row.getString("description")
         );
     return ret;
 }

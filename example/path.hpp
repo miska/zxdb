@@ -50,9 +50,9 @@ private:
     uint64_t file_id;
     //! Private constructor directly from database
     Path(
-              const uint64_t& in_db_id
-            , const std::string& in_url
-            , uint64_t in_file_id
+              const uint64_t in_db_id
+            , const std::string in_url
+            , const uint64_t in_file_id
             ) :
               db_id(in_db_id)
             , dirty(false)
@@ -103,9 +103,11 @@ public:
             {}
     //! Move constructor
     Path(const Path&& other) :
-            db_id(other.db_id),
-            dirty(other.dirty),
-            url(move(other.url)) {}
+              db_id(other.db_id)
+            , dirty(other.dirty)
+            , url(move(other.url))
+            , file_id(other.file_id)
+			{}
     //! Equality comparison
     virtual bool operator==(const Path& other) const;
     //! Assignment operator

@@ -50,9 +50,9 @@ private:
     std::string description;
     //! Private constructor directly from database
     Project(
-              const uint64_t& in_db_id
-            , const std::string& in_name
-            , const std::string& in_description
+              const uint64_t in_db_id
+            , const std::string in_name
+            , const std::string in_description
             ) :
               db_id(in_db_id)
             , dirty(false)
@@ -104,10 +104,11 @@ public:
             {}
     //! Move constructor
     Project(const Project&& other) :
-            db_id(other.db_id),
-            dirty(other.dirty),
-            name(move(other.name)),
-            description(move(other.description)) {}
+              db_id(other.db_id)
+            , dirty(other.dirty)
+            , name(move(other.name))
+            , description(move(other.description))
+			{}
     //! Equality comparison
     virtual bool operator==(const Project& other) const;
     //! Assignment operator

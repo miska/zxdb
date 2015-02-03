@@ -197,6 +197,15 @@ TEST_CASE( "Project works", "[project]" ) {
         REQUIRE(test_a == test_b);
     }
 
+    SECTION("Get by id works with empty strings") {
+        Project test_a(
+            "",
+            ""
+        );
+        Project test_b = Project::get_by_id(test_a.get_db_id());
+        REQUIRE(test_a == test_b);
+    }
+
     unlink(db_url.c_str());
 }
 

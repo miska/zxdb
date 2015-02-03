@@ -53,10 +53,10 @@ private:
     uint64_t project_id;
     //! Private constructor directly from database
     File(
-              const uint64_t& in_db_id
-            , const int64_t& in_size
-            , const std::string& in_hash
-            , uint64_t in_project_id
+              const uint64_t in_db_id
+            , const int64_t in_size
+            , const std::string in_hash
+            , const uint64_t in_project_id
             ) :
               db_id(in_db_id)
             , dirty(false)
@@ -118,10 +118,12 @@ public:
             {}
     //! Move constructor
     File(const File&& other) :
-            db_id(other.db_id),
-            dirty(other.dirty),
-            size(other.size),
-            hash(move(other.hash)) {}
+              db_id(other.db_id)
+            , dirty(other.dirty)
+            , size(other.size)
+            , hash(move(other.hash))
+            , project_id(other.project_id)
+			{}
     //! Equality comparison
     virtual bool operator==(const File& other) const;
     //! Assignment operator

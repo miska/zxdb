@@ -144,16 +144,15 @@ Path::Path(
     // Add into database if doesn't exists
     smt = conn.prepareCached("INSERT INTO paths ( "
                              "url, "
-                             "file_id ) "
+                             "file_id) "
                              "SELECT "
                              ":url, "
-                             ":file_id "
+                             "0 "
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM paths WHERE "
                              "url = :url LIMIT 1)");
     smt
         .set("url", url)
-        .set("file_id", file_id)
         .execute();
 
     // Get ID from the database
@@ -223,7 +222,7 @@ Path Path::get_by_id(uint64_t id) {
     auto row = smt.selectRow();
     Path ret(
               row.getUnsigned64("id")
-            , row.getString("url")
+            , row.isNull("url") ? "" : row.getString("url")
             , row.getUnsigned64("file_id")
         );
     return ret;

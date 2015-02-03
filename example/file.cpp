@@ -151,15 +151,15 @@ File& File::operator=(const File& other) {
 void File::serialize(cxxtools::SerializationInfo& si) {
     si.addMember("size").setValue(get_size());
     si.addMember("hash").setValue(get_hash());
-    auto nsi = si.addMember("path");
-    nsi.setTypeName("set");
-    nsi.setCategory(cxxtools::SerializationInfo::Array);
+    cxxtools::SerializationInfo& nsi = si.addMember("path");
     {
         auto list = get_paths();
         for(auto i: list) {
             i.serialize(nsi.addMember(""));
         }
     }
+    nsi.setTypeName("set");
+    nsi.setCategory(cxxtools::SerializationInfo::Array);
 }
 
 //! Importing previously exported structure
@@ -200,11 +200,11 @@ File::File(
     smt = conn.prepareCached("INSERT INTO files ( "
                              "size, "
                              "hash, "
-                             "project_id ) "
+                             "project_id) "
                              "SELECT "
                              ":size, "
                              ":hash, "
-                             ":project_id "
+                             "0 "
                              "WHERE 1 NOT IN "
                              "(SELECT 1 FROM files WHERE "
                              "size = :size AND "
@@ -212,7 +212,6 @@ File::File(
     smt
         .set("size", size)
         .set("hash", hash)
-        .set("project_id", project_id)
         .execute();
 
     // Get ID from the database
@@ -288,7 +287,7 @@ File File::get_by_id(uint64_t id) {
     File ret(
               row.getUnsigned64("id")
             , row.getInt64("size")
-            , row.getString("hash")
+            , row.isNull("hash") ? "" : row.getString("hash")
             , row.getUnsigned64("project_id")
         );
     return ret;
