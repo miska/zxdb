@@ -32,7 +32,7 @@
 .                property.tnttype = "Int32"
 .                property.sqltype = "SMALLINT"
 .            else
-.                property.ctype = "uint64_t"
+.                property.ctype = "uint16_t"
 .                property.tnttype = "Unsigned32"
 .                property.sqltype = "SMALLINT UNSIGNED"
 .            endif
@@ -218,7 +218,7 @@ public:
 .for belongs_to
             , $(name)_id(other.$(name)_id)
 .endfor
-			{}
+            {}
     //! Equality comparison
     virtual bool operator==(const $(class.Name)& other) const;
     //! Assignment operator
@@ -312,10 +312,10 @@ void $(class.Name)::save() {
                              " WHERE id = :id\");
     smt
 .for property
-        .set("$(name)", $(name))
+        .set$(tnttype:)("$(name)", $(name))
 .endfor
 .for belongs_to
-        .set("$(name)_id", $(name)_id)
+        .setUnsigned64("$(name)_id", $(name)_id)
 .endfor
         .set("id", db_id)
         .execute();
@@ -501,7 +501,7 @@ $(class.Name)::$(class.Name)(
 .endfor
     smt
 .for property
-        .set("$(name)", $(name))
+        .set$(tnttype:)("$(name)", $(name))
 .endfor
         .execute();
 
@@ -517,11 +517,13 @@ $(class.Name)::$(class.Name)(
 .endfor
     row = smt
 .for property
-        .set("$(name)", $(name))
+        .set$(tnttype:)("$(name)", $(name))
 .endfor
         .selectRow();
+    db_id = 0;
     row[0].get(db_id);
 .for belongs_to
+    $(name)_id = 0;
     row[$(index())].get($(name)_id);
 .endfor
 }
@@ -853,7 +855,7 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
     }
 
     SECTION("Check that setters works reliably") {
-		{
+        {
         $(class.Name) test_a(
 .for property
 .if type = "string"
@@ -870,7 +872,7 @@ TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
         test_a.set_$(name)(2);
 .endif
 .endfor
-		}
+        }
         auto res = $(class.Name)::search(
 .for property
 .if type = "string"
