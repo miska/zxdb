@@ -110,7 +110,7 @@ class $(Name);
 class $(class.Name) {
 private:
     //! Database id
-    uint64_t db_id;
+    int db_id;
     //! Indicates changes not yet saved in database
     bool dirty;
     //! Indicates whether existence of the table was already checked
@@ -121,16 +121,16 @@ private:
 .endfor
 .for belongs_to
     //! $(belongs_to:)
-    uint64_t $(name)_id;
+    int $(name)_id;
 .endfor
     //! Private constructor directly from database
     $(class.Name)(
-              const uint64_t in_db_id
+              const int in_db_id
 .for property
             , const $(ctype) in_$(name)
 .endfor
 .for belongs_to
-            , const uint64_t in_$(name)_id
+            , const int in_$(name)_id
 .endfor
             ) :
               db_id(in_db_id)
@@ -160,7 +160,7 @@ public:
     //! Save object into database
     virtual void save();
     //! Returns unique database id
-    virtual uint64_t get_db_id() const { return db_id; }
+    virtual int get_db_id() const { return db_id; }
 .for property
     //! Setter for $(name)
     virtual $(ctype)& set_$(name)(const $(ctype));
@@ -175,9 +175,9 @@ public:
 .endfor
 .for belongs_to
     //! Set id of parent $(name)
-    virtual void set_parent_$(name)_id(uint64_t id);
+    virtual void set_parent_$(name)_id(int id);
     //! Get id of parent $(name)
-    virtual uint64_t get_parent_$(name)_id() const;
+    virtual int get_parent_$(name)_id() const;
     //! Set parent $(name)
     virtual void set_parent_$(name)(const $(Name) parent);
     //! Get parent $(name)
@@ -315,7 +315,7 @@ void $(class.Name)::save() {
         .set$(tnttype:)("$(name)", $(name))
 .endfor
 .for belongs_to
-        .setUnsigned64("$(name)_id", $(name)_id)
+        .setInt("$(name)_id", $(name)_id)
 .endfor
         .set("id", db_id)
         .execute();
@@ -324,10 +324,10 @@ void $(class.Name)::save() {
 .for has_many
 //! Get all $(name)s belonging to this $(class.name)
 std::vector<$(Name)> $(class.Name)::get_$(name)s() const {
-    auto id = db_id;
+    int id = db_id;
     $(Name)::db_init();
     auto ret = $(Name)::search("$(class.name)_id = :$(class.name)_id",
-        [id](tntdb::Statement& st) { st.set("$(class.name)_id", id); } );
+        [id](tntdb::Statement& st) { st.setInt("$(class.name)_id", id); } );
     return ret;
 }
 
@@ -339,13 +339,13 @@ void $(class.Name)::add_$(name)($(Name)& $(name)) {
 .endfor
 .for belongs_to
 //! Set $(class.Name)::id of parent $(name)
-void $(class.Name)::set_parent_$(name)_id(uint64_t id) {
+void $(class.Name)::set_parent_$(name)_id(int id) {
     $(name)_id = id;
     dirty = true;
 }
 
 //! Get id of parent $(name)
-uint64_t $(class.Name)::get_parent_$(name)_id() const {
+int $(class.Name)::get_parent_$(name)_id() const {
     return $(name)_id;
 }
 
@@ -562,7 +562,7 @@ void $(class.Name)::for_each(std::function<void($(class.Name))> what,
             , row.get$(tnttype:)("$(name)")
 .endfor
 .for belongs_to
-            , row.getUnsigned64("$(name)_id")
+            , row.getInt("$(name)_id")
 .endfor
         );
         what(it);
@@ -572,40 +572,11 @@ void $(class.Name)::for_each(std::function<void($(class.Name))> what,
 //! Returns element specified by it's database id
 $(class.Name) $(class.Name)::get_by_id(uint64_t id) {
 
-    tntdb::Connection conn = tntdb::connectCached(db_url);
-    tntdb::Statement smt;
-
-    db_init();
-
-    // Query data
-    std::string query = "SELECT id "
-.for property
-                             ", $(name) "
-.endfor
-.for belongs_to
-                             ", $(name)_id "
-.endfor
-                             " FROM $(class.name)s "
-                             " WHERE id = :id ";
-    smt = conn.prepareCached(query);
-    smt.set("id", id);
-
-    // Construct response
-    auto row = smt.selectRow();
-    $(class.Name) ret(
-              row.getUnsigned64("id")
-.for property
-.if tnttype = "String"
-            , row.isNull("$(name)") ? "" : row.get$(tnttype:)("$(name)")
-.else
-            , row.get$(tnttype:)("$(name)")
-.endif
-.endfor
-.for belongs_to
-            , row.getUnsigned64("$(name)_id")
-.endfor
-        );
-    return ret;
+    std::vector<$(class.Name)> ret = $(class.Name)::search(
+        "id = :id",
+        [&id](tntdb::Statement& st) { st.setInt("id", id); }
+	);
+    return ret.front();
 }
 
 //! Deletes specified elements
