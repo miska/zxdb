@@ -1,0 +1,347 @@
+.echo "Generating $(class.name)_test.cpp..."
+.output "$(class.name)_test.cpp"
+/**
+ * \file $(class.name)_test.cpp
+ *
+ * \brief Tests for $(class.name)
+ *
+ * $(class.title:)
+ *
+ */
+
+/***** WARNING **************************************************************
+ *                                                                          *
+ * THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose *
+ * your changes at the next build cycle. This is great for temporary printf *
+ * statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places *
+ * for commits are:                                                         *
+ *                                                                          *
+ * - The XML model used for this code generation: $(filename), or           *
+ * - The generation script that built this file: $(script)                  *
+ *                                                                          *
+ ***************************************************************************/
+
+/*
+  ==========================================================================
+. for class.license
+  $(string.trim (license.):block                                           )
+. endfor
+  ==========================================================================
+*/
+
+#include <string>
+#include <stdio.h>
+#include <unistd.h>
+#include "catch.hpp"
+#include "$(class.name).hpp"
+.for has_many
+#include "$(name).hpp"
+.endfor
+
+extern std::string db_url;
+
+TEST_CASE( "$(class.Name) works", "[$(class.name)]" ) {
+    db_url  = "sqlite:";
+    db_url += tmpnam(NULL);
+    unlink(db_url.c_str());
+    $(class.Name)::db_reinit();
+.for has_many
+    $(Name)::db_reinit();
+.endfor
+
+    SECTION("Check that getters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        REQUIRE(test_a.get_db_id() != 0);
+    }
+
+    SECTION("Check that getters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        REQUIRE(test_a.get_$(name)() == "a");
+.else
+        REQUIRE(test_a.get_$(name)() == 1);
+.endif
+.endfor
+    }
+    SECTION("Check that setters works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+.for property
+.if type = "string"
+        REQUIRE(test_a.get_$(name)() == "b");
+.else
+        REQUIRE(test_a.get_$(name)() == 2);
+.endif
+.endfor
+    }
+
+    SECTION("Check that comparison works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"$(!last() ?? ",")
+.else
+            2$(!last() ?? ",")
+.endif
+.endfor
+        );
+        REQUIRE(test_a != test_b);
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that assignment works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"$(!last() ?? ",")
+.else
+            2$(!last() ?? ",")
+.endif
+.endfor
+        );
+        REQUIRE(test_a != test_b);
+        test_a = test_b;
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that copy constructor works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(test_a);
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Check that search works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"$(!last() ?? ",")
+.else
+            2$(!last() ?? ",")
+.endif
+.endfor
+        );
+        std::vector<$(class.Name)> res;
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 2);
+        res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = 'b'$(!last() ?? " AND ")"
+.else
+            "$(name) = 2$(!last() ?? " AND ")"
+.endif
+.endfor
+        );
+        REQUIRE(res.size() == 1);
+        REQUIRE(res[0] == test_b);
+        res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = :str$(!last() ?? " AND ")"
+.else
+            "$(name) = :num$(!last() ?? " AND ")"
+.endif
+.endfor
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+        REQUIRE(res[0] == test_b);
+    }
+
+    SECTION("Check that setters works reliably") {
+        {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+.for property
+.if type = "string"
+        test_a.set_$(name)("b");
+.else
+        test_a.set_$(name)(2);
+.endif
+.endfor
+        }
+        auto res = $(class.Name)::search(
+.for property
+.if type = "string"
+            "$(name) = :str$(!last() ?? " AND ")"
+.else
+            "$(name) = :num$(!last() ?? " AND ")"
+.endif
+.endfor
+            ,
+            [](tntdb::Statement& st) {
+                st.set("str", "b").set("num", 2);
+            }
+        );
+        REQUIRE(res.size() == 1);
+    }
+
+    SECTION("Check that remove works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b(
+.for property
+.if type = "string"
+            "b"$(!last() ?? ",")
+.else
+            2$(!last() ?? ",")
+.endif
+.endfor
+        );
+        std::vector<$(class.Name)> res;
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 2);
+        $(class.Name)::remove(
+.for property
+.if type = "string"
+            "$(name) = 'b'$(!last() ?? " AND ")"
+.else
+            "$(name) = 2$(!last() ?? " AND ")"
+.endif
+.endfor
+        );
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 1);
+        $(class.Name)::remove();
+        res = $(class.Name)::search();
+        REQUIRE(res.size() == 0);
+    }
+
+    SECTION("Getting members works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+.for has_many
+        REQUIRE(test_a.get_$(name)s().size() == 0);
+.endfor
+    }
+
+    SECTION("Serialization/deserialization works") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            "a"$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        cxxtools::SerializationInfo si;
+        test_a.serialize(si);
+        $(class.Name) test_b = $(class.Name)::deserialize(si);
+        REQUIRE(test_a == test_b);
+    }
+
+    SECTION("Get by id works with empty strings") {
+        $(class.Name) test_a(
+.for property
+.if type = "string"
+            ""$(!last() ?? ",")
+.else
+            1$(!last() ?? ",")
+.endif
+.endfor
+        );
+        $(class.Name) test_b = $(class.Name)::get_by_id(test_a.get_db_id());
+        REQUIRE(test_a == test_b);
+    }
+
+    unlink(db_url.c_str());
+}
+

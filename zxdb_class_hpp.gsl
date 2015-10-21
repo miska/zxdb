@@ -1,0 +1,198 @@
+.echo "Generating $(class.name).hpp..."
+.output "$(class.name).hpp"
+/**
+ * \file $(class.name).hpp
+ *
+ * \brief Header for $(class.name)
+ *
+ * $(class.title:)
+ *
+ */
+
+/***** WARNING **************************************************************
+ *                                                                          *
+ * THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose *
+ * your changes at the next build cycle. This is great for temporary printf *
+ * statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places *
+ * for commits are:                                                         *
+ *                                                                          *
+ * - The XML model used for this code generation: $(filename), or           *
+ * - The generation script that built this file: $(script)                  *
+ *                                                                          *
+ ***************************************************************************/
+
+/*
+  ==========================================================================
+. for class.license
+  $(string.trim (license.):block                                           )
+. endfor
+  ==========================================================================
+*/
+
+#ifndef __$(CLASS.NAME)_H_INCLUDED__
+#define __$(CLASS.NAME)_H_INCLUDED__
+
+#include <vector>
+#include <string>
+#include <functional>
+#include <tntdb.h>
+#include <cxxtools/serializationinfo.h>
+
+.for include
+.if (type) = "system"
+#include <$(name:)>
+.else
+#include "$(name:)"
+.endif
+.endfor
+
+.for has_many
+class $(Name);
+.endfor
+.for belongs_to
+class $(Name);
+.endfor
+
+class $(class.Name) {
+private:
+    //! Database id
+    int db_id;
+    //! Indicates changes not yet saved in database
+    bool dirty;
+    //! Indicates whether existence of the table was already checked
+    static bool table_exists;
+.for property
+    //! $(property:)
+    $(ctype) $(name);
+.endfor
+.for belongs_to
+    //! $(belongs_to:)
+    int $(name)_id;
+.endfor
+    //! Private constructor directly from database
+    $(class.Name)(
+              const int in_db_id
+.for property
+            , const $(ctype) in_$(name)
+.endfor
+.for belongs_to
+            , const int in_$(name)_id
+.endfor
+            ) :
+              db_id(in_db_id)
+            , dirty(false)
+.for property
+            , $(name)(in_$(name))
+.endfor
+.for belongs_to
+            , $(name)_id(in_$(name)_id)
+.endfor
+            {}
+public:
+    //! Returns element specified by it's database id
+    static $(class.Name) get_by_id(uint64_t id);
+    //! Destructor
+    virtual ~$(class.Name)() {
+        if(dirty)
+            save();
+    }
+    //! Makes sure that table exists (called from constructor)
+    static void db_init();
+    //! Tells class to reinitialize database (if you do something really nasty)
+    static void db_reinit() {
+        table_exists = false;
+        db_init();
+    }
+    //! Save object into database
+    virtual void save();
+    //! Returns unique database id
+    virtual int get_db_id() const { return db_id; }
+.for property
+    //! Setter for $(name)
+    virtual $(ctype)& set_$(name)(const $(ctype));
+    //! Getter for $(name)
+    virtual $(ctype)  get_$(name)() const;
+.endfor
+.for has_many
+    //! Get all $(name)s belonging to this $(class.name)
+    virtual std::vector<$(Name)> get_$(name)s() const;
+    //! Add new $(name) to this $(class.name)
+    virtual void add_$(name)($(Name)& $(name));
+.endfor
+.for belongs_to
+    //! Set id of parent $(name)
+    virtual void set_parent_$(name)_id(int id);
+    //! Get id of parent $(name)
+    virtual int get_parent_$(name)_id() const;
+    //! Set parent $(name)
+    virtual void set_parent_$(name)(const $(Name) parent);
+    //! Get parent $(name)
+    virtual $(Name) get_parent_$(name)() const;
+.endfor
+    //! Default constructor
+    $(class.Name)(
+.for property
+.if !defined(default)
+            const $(ctype)& in_$(name)$(!last() ?? ",")
+.else
+            const $(ctype)& in_$(name) = $(default:)$(!last() ?? ",")
+.endif
+.endfor
+        );
+    //! Copy constructor
+    $(class.Name)(const $(class.Name)& other) :
+              db_id(other.db_id)
+            , dirty(other.dirty)
+.for property
+            , $(name)(other.$(name))
+.endfor
+.for belongs_to
+            , $(name)_id(other.$(name)_id)
+.endfor
+            {}
+    //! Move constructor
+    $(class.Name)(const $(class.Name)&& other) :
+              db_id(other.db_id)
+            , dirty(other.dirty)
+.for property
+.if type = "string"
+            , $(name)(move(other.$(name)))
+.else
+            , $(name)(other.$(name))
+.endif
+.endfor
+.for belongs_to
+            , $(name)_id(other.$(name)_id)
+.endfor
+            {}
+    //! Equality comparison
+    virtual bool operator==(const $(class.Name)& other) const;
+    //! Assignment operator
+    virtual $(class.Name)& operator=(const $(class.Name)& other);
+    //! Inequality comparison
+    bool operator!=(const $(class.Name)& other) const {
+        return !operator==(other);
+    }
+    //! Deletes specified elements
+    static void remove(std::string where = "",
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+    //! Runs specified function on every matching element
+    static void for_each(std::function<void($(class.Name))> what,
+        std::string where = "",
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {});
+    //! Return matching instances
+    static std::vector<$(class.Name)> search(std::string where = "",
+        std::function<void(tntdb::Statement&)> set = [](tntdb::Statement&) {}) {
+        std::vector<$(class.Name)> ret;
+        $(class.Name)::for_each([&ret]($(class.Name) $(class.name)) {
+                ret.push_back($(class.name));
+            }, where, set);
+        return ret;
+    }
+    //! Exporting structure for future import
+    void serialize(cxxtools::SerializationInfo& si);
+    //! Importing previously exported structure
+    static $(class.Name) deserialize(const cxxtools::SerializationInfo& si);
+};
+
+#endif
